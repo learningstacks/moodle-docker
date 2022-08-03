@@ -1,0 +1,986 @@
+using module './moodle-docker.psm1'
+
+Describe 'moodle-docker.psm1' {
+
+    BeforeAll {
+        function GetStackConfig([hashtable]$params) {
+            $stack = New-Stack @params
+            $yaml = $stack.Invoke('config') | ConvertFrom-Yaml
+            $yaml
+        }
+
+        filter NormalizePath {
+            $_.ToString() -replace '(/|\\)+', '/'
+        }
+
+    }
+
+    BeforeEach {
+        # Create normalized basedir
+        $basedir = Split-Path $PSScriptRoot | NormalizePath
+
+        # Create moodle dir
+        $moodledir = "$TestDrive/moodle" | NormalizePath
+        New-Item -ItemType Directory -Path $moodledir
+
+        # Create app dir
+        $appdir = "$TestDrive/app" | NormalizePath
+        New-Item -ItemType Directory -Path $appdir
+    }
+
+    AfterEach {
+        #Delete all files and directories in TestDrive:
+        Get-ChildItem 'TestDrive:/' | Remove-Item -Force -Recurse
+
+        # Reset environment
+        Get-ChildItem env: | Where-Object { $_.Name -match '^MOODLE.*' } | ForEach-Object { Remove-Item "Env:$($_.Name)" }
+        Remove-Item 'Env:COMPOSE_PROJECT_NAME' -ErrorAction SilentlyContinue
+    }
+
+    Describe 'Class Stack' {
+
+        Describe 'Constructors' {
+
+            BeforeAll {
+                function VerifyMoodleDockerPaths([Stack]$Stack) {
+                    $Stack.MoodleServiceName | Should -Be 'webserver'
+                    $Stack.MoodleDir | Should -Be '/var/www/html'
+                    $Stack.BehatDataDir | Should -Be '/var/www/behatdata'
+                    $Stack.PhpunitDataDir | Should -Be '/var/www/phpunitdata'
+                    $Stack.MoodleDataDir | Should -Be '/var/www/moodledata'
+                    $Stack.RunDir | Should -Be '/var/www/testrun'
+                }
+
+                function VerifyStack([Stack]$Actual, [Object]$Expected) {
+                    $Actual.Name | Should -Be $Expected.Name
+                    $Actual.MoodleServiceName | Should -Be $Expected.MoodleServiceName
+                    $Actual.MoodleDir | Should -Be $Expected.MoodleDir
+                    $Actual.BehatDataDir | Should -Be $Expected.BehatDataDir
+                    $Actual.PhpunitDataDir | Should -Be $Expected.PhpunitDataDir
+                    $Actual.MoodleDataDir | Should -Be $Expected.MoodleDataDir
+                    $Actual.RunDir | Should -Be $Expected.RunDir
+                    Compare-Object $Stack.Env.Keys $Expected.Env.Keys | Should -BeNullOrEmpty
+                    foreach($e in $Expected.Env.GetEnumerator()) {
+                        $Stack.Env[$e.Name] | Should -Be $e.Value
+                    }
+                    $Actual.ComposeFiles -join ';' | Should -be ($Expected.ComposeFiles -join ';')
+                }
+            }
+
+            It 'Default constructor configures for moodle-docker container' {
+                $Stack = [Stack]::New()
+                VerifyMoodleDockerPaths $Stack
+            }
+
+            It 'Casts from a hashtable' {
+                $hash = @{
+                    Name              = 'stackname'
+                    MoodleServiceName = 'moodleservice'
+                    MoodleDir         = 'moodledir'
+                    BehatDataDir      = 'moodledir/behatdata'
+                    PhpunitDataDir    = 'moodledir/phpunitdata'
+                    MoodleDataDir     = 'moodledir/moodledata'
+                    RunDir            = 'moodledir/testrun'
+                    Env = @{
+                        Env1 = 'env1 value'
+                        Env2 = 'env2 value'
+                    }
+                    ComposeFiles = @(
+                        'file1'
+                        'file2'
+                    )
+                }
+                $Stack = [Stack]$hash
+                VerifyStack $Stack $hash
+            }
+
+            It 'Can be serialized to and from JSON' {
+                $hash = @{
+                    Name              = 'stackname'
+                    MoodleServiceName = 'moodleservice'
+                    MoodleDir         = 'moodledir'
+                    BehatDataDir      = 'moodledir/behatdata'
+                    PhpunitDataDir    = 'moodledir/phpunitdata'
+                    MoodleDataDir     = 'moodledir/moodledata'
+                    RunDir            = 'moodledir/testrun'
+                    Env = @{
+                        Env1 = 'env1 value'
+                        Env2 = 'env2 value'
+                    }
+                    ComposeFiles = @(
+                        'file1'
+                        'file2'
+                    )
+                }
+                $Stack = [Stack]$hash
+                $json = $Stack | ConvertTo-Json -Depth 5
+                $Stack2 = [Stack](ConvertFrom-Json -InputObject $json -AsHashtable)
+                VerifyStack $Stack2 $hash
+            }
+
+        }
+
+        Describe 'Exec method' {
+
+            It 'Calls docker compose exec on the passed service' {
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' {
+                    Write-Output @('Line 1', 'Line 2')
+                }
+                $stack = [Stack]@{
+                    Name         = 'aproject'
+                    ComposeFiles = @(
+                        'file1'
+                        'file2'
+                    )
+                }
+                $Stack.Exec('webserver', 'a command')
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' -Times 1 -Exactly -ParameterFilter {
+                    $Command -eq 'docker' && $CommandArgs -eq 'compose -p aproject -f file1 -f file2 exec --no-TTY webserver a command'
+                }
+
+            }
+
+        }
+
+        Describe 'Start method' {
+
+            It 'Executes docker compose up -d on the stack' {
+                Set-ItResult -Pending
+            }
+
+            It 'Waits for Db' {
+                Set-ItResult -Pending
+            }
+
+            It 'Waits for the App if it is included' {
+                Set-ItResult -Pending
+            }
+        }
+
+        Describe 'AddComposeFile method' {
+
+            It 'Adds an existing compose file to the collection, maintaining order' {
+                New-Item -ItemType File -Path 'TestDrive:/file1.txt'
+                New-Item -ItemType File -Path 'TestDrive:/file2.txt'
+                $stack = [Stack]::New()
+                $stack.AddComposeFile('TestDrive:/file2.txt')
+                $stack.AddComposeFile('TestDrive:/file1.txt')
+                $stack.ComposeFiles[0] -eq 'TestDrive:/file2.txt'
+                $stack.ComposeFiles[1] -eq 'TestDrive:/file1.txt'
+            }
+
+            It 'Throws if the file does not exist' {
+                $stack = [Stack]::New()
+                { $stack.AddComposeFile('TestDrive:/file2.txt') } | Should -Throw
+            }
+
+            It 'Prevents adding the same file more than once' {
+                Set-ItResult -Pending -Because 'May not need this'
+            }
+
+        }
+
+        Describe 'Container method' {
+
+            It 'Returns container inspect info for a service' {
+                Set-ItResult -Pending
+            }
+
+            It 'Can access container by network alias' {
+                Set-ItResult -Pending
+            }
+
+            It 'Returns $null if the container does not yet exist' {
+                Set-ItResult -Pending
+            }
+
+        }
+
+        Describe 'WaitForDb method' {
+
+            It 'If mssql: executes container script.' {
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' { }
+                Mock -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' { }
+                $params = @{
+                    MOODLE_DOCKER_WWWROOT = $moodledir
+                    MOODLE_DOCKER_DB      = 'mssql'
+                }
+                $stack = New-Stack @params
+                $stack.WaitForDb()
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' -ParameterFilter {
+                    $CommandArgs -match 'exec --no-TTY db /wait-for-mssql-to-come-up.sh$'
+                }
+                Should -Not -Invoke -ModuleName 'moodle-docker' -CommandName 'Start-Sleep'
+            }
+
+            It "If oracle: loops looking for db service log entry: 'listening on IP'." {
+                $script:calls = 0
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' {
+                    $script:calls += 1
+                    if ($script:calls -le 1) {
+                        # Return log string that does not indicate app is up
+                        'a string'
+                    }
+                    else {
+                        @(
+                            'a line'
+                            'xxxlistening on IP...xxx'
+                            'another line'
+                        )
+                    }
+
+                }
+                Mock -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' { }
+                $params = @{
+                    MOODLE_DOCKER_WWWROOT = $moodledir
+                    MOODLE_DOCKER_DB      = 'oracle'
+                }
+                $stack = New-Stack @params
+                $stack.WaitForDB()
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' -Times 2 -ParameterFilter {
+                    $CommandArgs -match 'logs db$'
+                }
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' -Times 1 -Exactly
+
+            }
+
+            It 'if <DB>: just sleeps for 5 seconds.' -TestCases @(
+                @{DB = 'pgsql' }
+                @{DB = 'mysql' }
+                @{DB = 'mariadb' }
+            ) {
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' { }
+                Mock -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' { }
+                $params = @{
+                    MOODLE_DOCKER_WWWROOT = $moodledir
+                    MOODLE_DOCKER_DB      = $DB
+                }
+                $stack = New-Stack @params
+                $stack.WaitForDB()
+                Should -Not -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec'
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' -Times 1 -ParameterFilter {
+                    $Seconds -eq 5
+                }
+            }
+        }
+
+
+        Describe 'WaitForApp method' {
+
+            It 'Does not wait if moodleapp service is not included.' {
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' { }
+                Mock -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' { }
+                $stack = [Stack]@{
+                    Name = 'aproject'
+                }
+
+                $stack.WaitForApp()
+                Should -Not -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec'
+                Should -Not -Invoke -ModuleName 'moodle-docker' -CommandName 'Start-Sleep'
+            }
+
+            It "For <Scenario> configuration, Considers test app to be up if moodleapp log contains '<String>'." -TestCases @(
+                @{
+                    Scenario = 'Development'
+                    String   = 'dev server running: '
+                }
+                @{
+                    Scenario = 'Development'
+                    String   = 'Angular Live Development Server is listening'
+                }
+                @{
+                    Scenario = 'Development'
+                    String   = 'Configuration complete; ready for start up'
+                }
+                @{
+                    Scenario = 'Test'
+                    String   = 'dev server running: '
+                }
+                @{
+                    Scenario = 'Test'
+                    String   = 'Angular Live Development Server is listening'
+                }
+                @{
+                    Scenario = 'Test'
+                    String   = 'Configuration complete; ready for start up'
+                }
+            ) {
+                $script:calls = 0
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' {
+                    $script:calls += 1
+                    if ($script:calls -le 1) {
+                        # Return log string that does not indicate app is up
+                        'a string'
+                    }
+                    else {
+                        @(
+                            'a line'
+                            "xxx$($String)xxx"
+                            'another line'
+                        )
+                    }
+                }
+                Mock -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' { }
+                @{version = '3.9.5' } | ConvertTo-Json | Set-Content "$appdir/package.json"
+                $stack = [Stack]@{
+                    Name     = 'aproject'
+                    Services = @{
+                        'moodleapp' = @{}
+                    }
+                }
+                $stack.WaitForApp()
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' -Times 2 -Exactly
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Start-Sleep' -Times 1 -Exactly
+            }
+
+        }
+
+        Describe 'CopyTo method' {
+
+            It 'Executes docker cp to container' {
+                $Service = 'webserver'
+                $ContainerName = 'webserver-container-name'
+                $SrcPath = 'c:/dir/dir/src.file'
+                $DestPath = '/dir/dir'
+                $stack = [Stack]@{
+                    Name     = 'aproject'
+                    Services = @{
+                        'webserver' = @{
+                            Name = $ContainerName
+                        }
+                    }
+                }
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' {}
+                $stack.CopyTo($Service, $SrcPath, $DestPath)
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' -Times 1 -Exactly -ParameterFilter {
+                    $Command -eq 'docker' -and ($CommandArgs -eq "cp $SrcPath $($ContainerName):$DestPath")
+                }
+            }
+        }
+
+
+        Describe 'CopyFrom method' {
+
+            It 'Executes docker cp from container' {
+                $Service = 'webserver'
+                $ContainerName = 'webserver-container-name'
+                $SrcPath = '/container/file.txt'
+                $DestPath = 'c:/local'
+                $stack = [Stack]@{
+                    Name     = 'aproject'
+                    Services = @{
+                        'webserver' = @{
+                            Name = $ContainerName
+                        }
+                    }
+                }
+                Mock -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' {}
+                $stack.CopyFrom($Service, $SrcPath, $DestPath)
+                Should -Invoke -ModuleName 'moodle-docker' -CommandName 'Invoke-Exec' -Times 1 -Exactly -ParameterFilter {
+                    $Command -eq 'docker' -and ($CommandArgs -eq "cp $($ContainerName):$SrcPath $DestPath")
+                }
+            }
+
+        }
+
+    }
+
+    Describe 'Function Get-Stack' {
+
+        BeforeEach {
+            $loc = Get-Location
+            New-Item -ItemType Directory -Path 'TestDrive:/proj/subdir'
+            Get-ChildItem 'TestDrive:/' -Recurse stackdef.* | Should -BeNullOrEmpty
+        }
+
+        AfterEach {
+            Set-Location $loc
+        }
+
+        It 'Loads Stack config from stackdef.<Type> file in current working directory.' -TestCases @(
+            @{Type = 'ps1' }
+            @{Type = 'json' }
+            @{Type = 'yml' }
+        ) {
+            $dir = 'TestDrive:/proj/subdir'
+            switch ($Type) {
+                'ps1' {
+                    @(
+                        '@{'
+                        "   MOODLE_DOCKER_WWWROOT = '$moodledir'"
+                        '}'
+                    ) | Set-Content "$dir/stackdef.ps1"
+                }
+                'json' {
+                    @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    } | ConvertTo-Json | Set-Content "$dir/stackdef.json"
+                }
+                'yml' {
+                    @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    } | ConvertTo-Yaml | Set-Content "$dir/stackdef.yml"
+                }
+            }
+            Set-Location 'TestDrive:/proj/subdir'
+            $stack = Get-Stack
+            $stack | Should -Not -BeNullOrEmpty
+            $stack.Env.MOODLE_DOCKER_WWWROOT | Should -Be $moodledir
+        }
+
+        It 'Loads Stack config from Stack.<Type> file in any parent of current working directory.' -TestCases @(
+            @{Type = 'ps1' }
+            @{Type = 'json' }
+            @{Type = 'yml' }
+        ) {
+            $dir = 'TestDrive:/proj'
+            switch ($Type) {
+                'ps1' {
+                    @(
+                        '@{'
+                        "   MOODLE_DOCKER_WWWROOT = '$moodledir'"
+                        '}'
+                    ) | Set-Content "$dir/stackdef.ps1"
+                }
+                'json' {
+                    @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    } | ConvertTo-Json | Set-Content "$dir/stackdef.json"
+                }
+                'yml' {
+                    @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    } | ConvertTo-Yaml | Set-Content "$dir/stackdef.yml"
+                }
+            }
+            Set-Location 'TestDrive:/proj/subdir'
+            $stack = Get-Stack
+            $stack | Should -Not -BeNullOrEmpty
+            $stack.Env.MOODLE_DOCKER_WWWROOT | Should -Be $moodledir
+        }
+
+        It 'Loads Stack config from a specified file.' -TestCases @(
+            @{Type = 'ps1' }
+            @{Type = 'json' }
+            @{Type = 'yml' }
+        ) {
+            $path = "TestDrive:/proj/foo.$Type"
+            switch ($Type) {
+                'ps1' {
+                    @(
+                        '@{'
+                        "   MOODLE_DOCKER_WWWROOT = '$moodledir'"
+                        '}'
+                    ) | Set-Content $path
+                }
+                'json' {
+                    @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    } | ConvertTo-Json | Set-Content $path
+                }
+                'yml' {
+                    @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    } | ConvertTo-Yaml | Set-Content $path
+                }
+            }
+            $stack = Get-Stack -Path $path
+            $stack | Should -Not -BeNullOrEmpty
+            $stack.Env.MOODLE_DOCKER_WWWROOT | Should -Be $moodledir
+        }
+
+        It 'resolves paths relative to the stackdef file location.' {
+            $path = 'TestDrive:/proj/foo.json'
+            New-Item -Type Directory -Path 'TestDrive:/proj/lms/moodle'
+            New-Item -Type Directory -Path 'TestDrive:/proj/app'
+
+            @{
+                MOODLE_DOCKER_WWWROOT  = 'lms\moodle'
+                MOODLE_DOCKER_APP_PATH = 'app'
+            } | ConvertTo-Json | Set-Content 'TestDrive:/proj/foo.json'
+
+            $stack = Get-Stack -Path $path
+            $stack | Should -Not -BeNullOrEmpty
+            $stack.Env.MOODLE_DOCKER_WWWROOT | Should -Be ("$(Convert-Path TestDrive:/)/proj/lms/moodle" | NormalizePath)
+            $stack.Env.MOODLE_DOCKER_APP_PATH | Should -Be ("$(Convert-Path TestDrive:/)/proj/app" | NormalizePath)
+        }
+
+        It 'Throws if Path parameter does not reference an existing file.' {
+            $path = 'TestDrive:/proj/foo.ps1'
+            { Get-Stack -Path $path -ErrorAction Stop } | Should -Throw
+        }
+
+        It 'Throws if stackdef file not found in dir hierarchy.' {
+            Set-Location 'TestDrive:/proj/subdir'
+            { Get-Stack -ErrorAction Stop } | Should -Throw
+        }
+
+    }
+
+    Describe 'Function New-Stack' {
+
+        Context 'Webserver service configuration' {
+
+            Context 'Moodle codebase' {
+
+                It 'Parameter MOODLE_DOCKER_WWWROOT Is mandatory.' {
+                    $cmd = Get-Command New-Stack -Module 'moodle-docker'
+                    $param = $cmd.Parameters.MOODLE_DOCKER_WWWROOT
+                    $param.ParameterSets.Keys | Should -HaveCount 1
+                    $param.ParameterSets.Keys | Should -Contain '__AllParameterSets'
+                    $param.ParameterSets.__AllParameterSets.IsMandatory | Should -BeTrue
+                }
+
+                It 'Parameter MOODLE_DOCKER_WWWROOT must reference an existing directory.' {
+                    { New-Stack -MOODLE_DOCKER_WWWROOT $moodledir } | Should -Not -Throw
+                    { New-Stack -MOODLE_DOCKER_WWWROOT "$TestDrive/invaliddir" } | Should -Throw
+                }
+
+                It 'Mounts the codebase at /var/www/html.' {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    }
+                    $yaml.services.webserver.volumes | Where-Object {
+                        $_.target -eq '/var/www/html' `
+                            -and $_.source -eq $moodledir
+                    } | Should -Not -BeNullOrEmpty
+                }
+
+            }
+
+            Context 'PHP Version' {
+
+                It 'Supports PHP "<Version>".' -TestCases @(
+                    @{Version = '5.6' }
+                    @{Version = '7.0' }
+                    @{Version = '7.1' }
+                    @{Version = '7.2' }
+                    @{Version = '7.3' }
+                    @{Version = '7.4' }
+                ) {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT     = $moodledir
+                        MOODLE_DOCKER_DB          = 'pgsql'
+                        MOODLE_DOCKER_PHP_VERSION = $Version
+                    }
+                    $yaml.services.webserver.image | Should -Be "moodlehq/moodle-php-apache:$($Version)"
+                }
+
+                It 'Defaults to 7.3.' {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    }
+                    $yaml.services.webserver.image | Should -Be 'moodlehq/moodle-php-apache:7.3'
+                }
+
+            }
+
+            Context 'Webserver port mapping' {
+
+                It 'If port is not specified, web server port is not mapped.' {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT = $moodledir
+                    }
+                    $yaml.services.webserver.Keys | Should -Not -Contain 'ports'
+                }
+
+                It 'If port is 0, web server port is not mapped.' {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT  = $moodledir
+                        MOODLE_DOCKER_WEB_PORT = 0
+                    }
+                    $yaml.services.webserver.Keys | Should -Not -Contain 'ports'
+                }
+
+                It 'If just the port is specified, web server port is mapped to 127.0.0.1:<port>.' {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT  = $moodledir
+                        MOODLE_DOCKER_WEB_PORT = '8000'
+                    }
+                    $yaml.services.webserver.ports[0].Target | Should -Be '80'
+                    $yaml.services.webserver.ports[0].host_ip | Should -Be '127.0.0.1'
+                    $yaml.services.webserver.ports[0].published | Should -Be '8000'
+                }
+
+                It 'If IP and Port are specified, port 80 is mapped to <IP>:<port>.' {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT  = $moodledir
+                        MOODLE_DOCKER_WEB_PORT = '172.1.1.1:8100'
+                    }
+                    $yaml.services.webserver.ports[0].Target | Should -Be '80'
+                    $yaml.services.webserver.ports[0].host_ip | Should -Be '172.1.1.1'
+                    $yaml.services.webserver.ports[0].published | Should -Be '8100'
+                }
+
+            }
+
+        }
+
+        Context 'Mail service (MailHog) configuration' {
+
+            It 'Configures mailhog service by default.' {
+                $yaml = GetStackConfig @{
+                    MOODLE_DOCKER_WWWROOT = $moodledir
+                }
+                $yaml.services.mailhog.image | Should -Be 'mailhog/mailhog'
+                $yaml.services.webserver.depends_on.mailhog | Should -Not -BeNullOrEmpty
+                $yaml.services.webserver.volumes | Where-Object {
+                    $_.source -eq "$($basedir)/assets/web/apache2_mailhog.conf" `
+                        -and $_.target -eq '/etc/apache2/conf-enabled/apache2_mailhog.conf'
+                } | Should -Not -BeNullOrEmpty
+            }
+
+        }
+
+        Context 'DB service Configuration' {
+
+            It '<Scenario>.' -TestCases @(
+                @{
+                    Scenario = 'Defaults to postgres'
+                    Image    = 'postgres:11'
+                    DBType   = 'pgsql'
+                }
+                @{
+                    Scenario = 'Supports Postgres'
+                    DB       = 'pgsql'
+                    Image    = 'postgres:11'
+                    DBType   = 'pgsql'
+                }
+                @{
+                    Scenario = 'Supports mariadb'
+                    DB       = 'mariadb';
+                    Image    = 'mariadb:10.5'
+                    DBType   = 'mariadb'
+                }
+                @{
+                    Scenario = 'Supports mysql'
+                    DB       = 'mysql'
+                    Image    = 'mysql:5'
+                    DBType   = 'mysqli'
+                }
+                @{
+                    Scenario = 'Supports SQL Server'
+                    DB       = 'mssql'
+                    Image    = 'moodlehq/moodle-db-mssql'
+                    DBType   = 'sqlsrv'
+                }
+                @{
+                    Scenario   = 'Supports SQL Server with PHP 5.6'
+                    DB         = 'mssql'
+                    PHPVersion = '5.6'
+                    Image      = 'moodlehq/moodle-db-mssql'
+                    DBType     = 'mssql'
+                }
+                @{
+                    Scenario = 'Supports Oracle'
+                    DB       = 'oracle'
+                    Image    = 'moodlehq/moodle-db-oracle-r2'
+                    DBType   = 'oci'
+                }
+            ) {
+                $params = @{
+                    MOODLE_DOCKER_WWWROOT     = $moodledir
+                    MOODLE_DOCKER_PHP_VERSION = $PHPVersion ? $PHPVersion : '7.3'
+                }
+                if ($DB) { $params.MOODLE_DOCKER_DB = $DB }
+                $yaml = GetStackConfig $params
+                $yaml.services.db.image | Should -Be $Image
+                $yaml.services.webserver.environment.MOODLE_DOCKER_DBTYPE | Should -Be $DBType
+            }
+
+        }
+
+        Context 'Selenium service configuration' {
+
+            It "Defaults to 'firefox:3." {
+                $yaml = GetStackConfig @{
+                    MOODLE_DOCKER_WWWROOT = $moodledir
+                }
+                $yaml.services.selenium.image | Should -Be 'selenium/standalone-firefox:3'
+                $yaml.services.selenium.ports | Should -BeNullOrEmpty
+            }
+
+            It 'Supports <Browser>.' -TestCases @(
+                @{Browser = 'firefox'; Name = 'firefox'; Tag = 3 }
+                @{Browser = 'firefox:2'; Name = 'firefox'; Tag = 2 }
+                @{Browser = 'firefox:3'; Name = 'firefox'; Tag = 3 }
+                @{Browser = 'chrome'; Name = 'chrome'; Tag = 3 }
+                @{Browser = 'chrome:2'; Name = 'chrome'; Tag = 2 }
+                @{Browser = 'chrome:3'; Name = 'chrome'; Tag = 3 }
+            ) {
+                $yaml = GetStackConfig @{
+                    MOODLE_DOCKER_WWWROOT = $moodledir
+                    MOODLE_DOCKER_BROWSER = $Browser
+                }
+                $yaml.services.selenium.image | Should -Be "selenium/standalone-$($Name):$($Tag)"
+                $yaml.services.selenium.ports | Should -BeNullOrEmpty }
+
+            It 'Can enable VNC debug (<Scenario>).' -TestCases @(
+                @{Scenario = 'Port only'; Port = '8100'; HostIP = '127.0.0.1'; HostPort = 8100 }
+                @{Scenario = 'ip:port'; Port = '172.1.1.1:8200'; HostIP = '172.1.1.1'; HostPort = 8200 }
+            ) {
+                $yaml = GetStackConfig @{
+                    MOODLE_DOCKER_WWWROOT           = $moodledir
+                    MOODLE_DOCKER_BROWSER           = 'chrome'
+                    MOODLE_DOCKER_SELENIUM_VNC_PORT = $Port
+                }
+                $yaml.services.selenium.image | Should -Be 'selenium/standalone-chrome-debug:3'
+                $yaml.services.selenium.ports | Where-Object {
+                    $_.target -eq 5900 `
+                        -and $_.host_ip -eq $HostIP `
+                        -and $_.published -eq $HostPort
+                } | Should -HaveCount 1
+            }
+
+        }
+
+        Context 'Moodleapp service configuration' {
+
+            Context 'MoodleApp Development' {
+
+                It 'If MOODLE_DOCKER_APP_PATH is specified a development config is used (<Scenario>).' {
+                    @{version = '3.9.5' } | ConvertTo-Json | Set-Content "$appdir/package.json"
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT  = $moodledir
+                        MOODLE_DOCKER_BROWSER  = 'chrome'
+                        MOODLE_DOCKER_APP_PATH = $appdir
+                    }
+                    $yaml.services.moodleapp.image | Should -Match '^node:[0-9]+$'
+                    $yaml.services.moodleapp.ports.count | Should -BeGreaterThan 0
+                }
+
+                It 'MOODLE_DOCKER_APP_PATH must be an existing directory.' {
+                    $params = @{
+                        MOODLE_DOCKER_WWWROOT  = $PSScriptRoot
+                        MOODLE_DOCKER_BROWSER  = 'chrome'
+                        MOODLE_DOCKER_APP_PATH = "$TestDrive/nodir"
+                    }
+                    { New-Stack @params } | Should -Throw
+                }
+
+                It 'App package.json version determines MOODLE_DOCKER_APP_RUNTIME: (<Scenario>).' -TestCases @(
+                    @{
+                        Scenario = 'Version -lt 3.9.5 => ionic3'
+                        Version  = '3.9.4'
+                        Expected = 'ionic3'
+                    }
+                    @{
+                        Scenario = 'Version -eq 3.9.5 => ionic5'
+                        Version  = '3.9.5'
+                        Expected = 'ionic5'
+                    }
+                ) {
+                    @{version = $Version } | ConvertTo-Json | Set-Content "$appdir/package.json"
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT  = $moodledir
+                        MOODLE_DOCKER_BROWSER  = 'chrome'
+                        MOODLE_DOCKER_APP_PATH = $appdir
+                    }
+                    if ([version]$Version -ge [version]'3.9.5') {
+                        $yaml.services.moodleapp.image | Should -Be 'node:14'
+                    }
+                    else {
+                        $yaml.services.moodleapp.image | Should -Be 'node:11'
+                    }
+                }
+
+                It 'MOODLE_DOCKER_APP_RUNTIME overrides package.json version  (<Scenario>).' -TestCases @(
+                    @{
+                        Scenario = 'Version 3.9.5 overridden to ionic3'
+                        Version  = '3.9.5'
+                        Runtime  = 'ionic3'
+                    }
+                    @{
+                        Scenario = 'Version 3.9.4 overridden to ionic5'
+                        Version  = '3.9.4'
+                        Runtime  = 'ionic5'
+                    }
+                ) {
+                    @{version = $Version } | ConvertTo-Json | Set-Content "$appdir/package.json"
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT     = $moodledir
+                        MOODLE_DOCKER_BROWSER     = 'chrome'
+                        MOODLE_DOCKER_APP_PATH    = $appdir
+                        MOODLE_DOCKER_APP_RUNTIME = $Runtime
+                    }
+                    $yaml.services.webserver.environment.MOODLE_DOCKER_APP | Should -Be 'true'
+                    if ($Runtime -eq 'ionic5') {
+                        $yaml.services.moodleapp.image | Should -Be 'node:14'
+                    }
+                    else {
+                        $yaml.services.moodleapp.image | Should -Be 'node:11'
+                    }
+                }
+
+            }
+
+            Context 'MoodleApp Test' {
+
+                It 'If MOODLE_DOCKER_APP_VERSION is specified a non-development config is used (<Scenario>).' -TestCases @(
+                    @{
+                        Scenario = 'Version 3.9.4 => ionic3'
+                        Version  = '3.9.4'
+                        Expected = 'ionic3'
+                    }
+                    @{
+                        Scenario = 'Version 3.9.5 => ionic5'
+                        Version  = '3.9.5'
+                        Expected = 'ionic5'
+                    }
+                ) {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT     = $moodledir
+                        MOODLE_DOCKER_BROWSER     = 'chrome'
+                        MOODLE_DOCKER_APP_VERSION = $Version
+                    }
+                    $yaml.services.webserver.environment.MOODLE_DOCKER_APP | Should -Be 'true'
+                    $yaml.services.moodleapp.image | Should -Match "^moodlehq/moodleapp:$($Version)$"
+                    if ([version]$Version -ge [version]'3.9.5') {
+                        $yaml.services.webserver.environment.MOODLE_DOCKER_APP_PORT | Should -Be 80
+                        $yaml.services.moodleapp.ports[0].Target | Should -Be '80'
+                        $yaml.services.moodleapp.ports[0].published | Should -Be '8100'
+                    }
+                    else {
+                        $yaml.services.moodleapp.Keys | Should -Not -Contain 'ports'
+                    }
+                }
+
+                It 'Parameter MOODLE_DOCKER_APP_RUNTIME overrides version (<Scenario>).' -TestCases @(
+                    @{
+                        Scenario = 'Version 3.9.5 overridden to ionic3'
+                        Version  = '3.9.5'
+                        Runtime  = 'ionic3'
+                    }
+                    @{
+                        Scenario = 'Version 3.9.4 overridden to ionic5'
+                        Version  = '3.9.4'
+                        Runtime  = 'ionic5'
+                    }
+                ) {
+                    $yaml = GetStackConfig @{
+                        MOODLE_DOCKER_WWWROOT     = $moodledir
+                        MOODLE_DOCKER_BROWSER     = 'chrome'
+                        MOODLE_DOCKER_APP_VERSION = $Version
+                        MOODLE_DOCKER_APP_RUNTIME = $Runtime
+                    }
+                    $yaml.services.webserver.environment.MOODLE_DOCKER_APP | Should -Be 'true'
+                    $yaml.services.moodleapp.image | Should -Match "^moodlehq/moodleapp:$($Version)$"
+                    if ($Runtime -eq 'ionic5') {
+                        $yaml.services.webserver.environment.MOODLE_DOCKER_APP_PORT | Should -Be 80
+                        $yaml.services.moodleapp.ports[0].Target | Should -Be '80'
+                        $yaml.services.moodleapp.ports[0].published | Should -Be '8100'
+                    }
+                    else {
+                        $yaml.services.moodleapp.Keys | Should -Not -Contain 'ports'
+                    }
+
+                }
+
+            }
+
+            It 'Disallows specifying both MOODLE_DOCKER_APP_PATH and MOODLE_DOCKER_APP_VERSION.' {
+                @{version = '3.9.5' } | ConvertTo-Json | Set-Content "$appdir/package.json"
+                $params = @{
+                    MOODLE_DOCKER_WWWROOT     = $moodledir
+                    MOODLE_DOCKER_BROWSER     = 'chrome'
+                    MOODLE_DOCKER_APP_PATH    = $appdir
+                    MOODLE_DOCKER_APP_VERSION = '3.9.5'
+                }
+                { New-Stack @params } | Should -Throw
+            }
+
+            It 'If browser is not chrome, app will not be included.' {
+                $yaml = GetStackConfig @{
+                    MOODLE_DOCKER_WWWROOT  = $moodledir
+                    MOODLE_DOCKER_BROWSER  = 'firefox'
+                    MOODLE_DOCKER_APP_PATH = $appdir
+                }
+
+                $yaml.services.Keys | Should -Not -Contain 'moodleapp'
+            }
+
+        }
+
+        Context 'External services configuration' {
+
+            It 'Includes all external services if Parameter MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES is true.' {
+                $yaml = GetStackConfig @{
+                    MOODLE_DOCKER_WWWROOT                   = $moodledir
+                    MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES = $true
+                }
+
+                $yaml.services.memcached0.image | Should -Match '^memcached:.*$'
+                $yaml.services.memcached1.image | Should -Match '^memcached:.*$'
+                $yaml.services.mongo.image | Should -Match '^mongo:.*$'
+                $yaml.services.redis.image | Should -Match '^redis:.*$'
+                $yaml.services.solr.image | Should -Match '^solr:.*$'
+                $yaml.services.ldap.image | Should -Match 'openldap'
+
+            }
+        }
+
+        Context 'Extending' {
+
+            It 'Supports adding environment variables and compose files.' {
+                @{
+                    version  = '2'
+                    services = @{
+                        newservice = @{
+                            image = '${NEW_ENVVAR}'
+                        }
+                    }
+                } | ConvertTo-Yaml | Set-Content "$moodledir/new.yml"
+
+                $yaml = GetStackConfig @{
+                    MOODLE_DOCKER_WWWROOT                   = $moodledir
+                    MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES = $true
+                    AdditionalEnvVars                       = @{
+                        NEW_ENVVAR = 'NEW_ENVVAR value'
+                    }
+                    AdditionalComposeFiles                  = @(
+                        "$moodledir/new.yml"
+                    )
+                }
+                $yaml.services.newservice.image | Should -Be 'NEW_ENVVAR value'
+            }
+
+        }
+    }
+
+    Context 'Moodle volume' {
+
+        Describe 'Function Start-Stack' {
+
+            BeforeEach {
+                $params = @{
+                    MOODLE_DOCKER_WWWROOT = $moodledir
+                    MOODLE_DOCKER_VOLUME  = 'moodle_unittest'
+                }
+                $stack = New-Stack @params
+                $Stack.Invoke('down --volumes')
+                docker volume rm $($params.MOODLE_DOCKER_VOLUME) --force
+            }
+            AfterEach {
+                $stack.Invoke('down --volumes')
+                docker volume rm $($params.MOODLE_DOCKER_VOLUME) --force
+            }
+
+            It 'Creates and Initializes new volume if it does not exist' {
+                "<?php echo 'new volume';" | Set-Content "$moodledir/index.php"
+                $vol = Invoke-Expression "docker volume ls --filter name=$($params.MOODLE_DOCKER_VOLUME) -q"
+                $vol | Should -BeNullOrEmpty
+                $stack.Start()
+                $vol = Invoke-Expression "docker volume ls --filter name=$($params.MOODLE_DOCKER_VOLUME) -q"
+                $vol | Should -Not -BeNullOrEmpty
+                $out = $Stack.Exec('webserver', 'php /var/www/html/index.php')
+                $out | Should -Be 'new volume'
+            }
+
+            It 'Uses existing volume without change' {
+
+            }
+
+        }
+    }
+
+}
