@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<testsuites xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="junit_schema_4.xsd" name="Pester" tests="21" errors="0" failures="0" disabled="0" time="1.412">
+  <testsuite name="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" tests="21" errors="0" failures="0" hostname="TERRY-RYZEN" id="0" skipped="0" disabled="0" package="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" time="1.412">
+    <properties>
+      <property name="junit-version" value="4" />
+      <property name="user-domain" value="TERRY-RYZEN" />
+      <property name="clr-version" value="Unknown" />
+      <property name="cwd" value="C:\Users\Terry\workspace\moodle-docker" />
+      <property name="os-version" value="10.0.22000" />
+      <property name="machine-name" value="TERRY-RYZEN" />
+      <property name="user" value="Terry" />
+      <property name="platform" value="Microsoft Windows 11 Pro|C:\WINDOWS|\Device\Harddisk1\Partition4" />
+    </properties>
+    <testcase name="Default Stack.Services = db, exttests, mailhog, selenium, webserver" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.003" />
+    <testcase name="Default Stack.selenium.image matches selenium/standalone-firefox:3" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.selenium.No ports are published" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.003" />
+    <testcase name="Default Stack.db.image matches postgres:.*" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.db.No ports are published" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.001" />
+    <testcase name="Default Stack.mailhog.image matches mailhog/mailhog" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.mailhog.No ports are published" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.001" />
+    <testcase name="Default Stack.exttests.image matches moodlehq/moodle-exttests" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.004" />
+    <testcase name="Default Stack.exttests.No ports are published" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.001" />
+    <testcase name="Default Stack.webserver.image matches moodlehq/moodle-php-apache:7.4" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_APP = " status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.003" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_APP_PORT = " status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.004" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_PHPUNIT_EXTRAS = " status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_WEB_PORT = " status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_BROWSER = firefox" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_DBPASS = m@0dl3ing" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_DBUSER = moodle" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_DBNAME = moodle" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_WEB_HOST = localhost" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.environment.MOODLE_DOCKER_DBTYPE = pgsql" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+    <testcase name="Default Stack.webserver.No ports are published" status="Passed" classname="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" assertions="0" time="0.002" />
+  </testsuite>
+</testsuites>

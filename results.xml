@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="21" errors="0" failures="0" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2022-08-04" time="08:33:27">
+  <environment user-domain="TERRY-RYZEN" clr-version="Unknown" cwd="C:\Users\Terry\workspace\moodle-docker" nunit-version="2.5.8.0" os-version="10.0.22000" machine-name="TERRY-RYZEN" user="Terry" platform="Microsoft Windows 11 Pro|C:\WINDOWS|\Device\Harddisk1\Partition4" />
+  <culture-info current-culture="en-US" current-uiculture="en-US" />
+  <test-suite type="TestFixture" name="Pester" executed="True" result="Success" success="True" time="1.4122" asserts="0" description="Pester">
+    <results>
+      <test-suite type="TestFixture" name="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13" executed="True" result="Success" success="True" time="1.4122" asserts="0" description="&lt;ScriptBlock&gt;C:\Users\Terry\workspace\moodle-docker\powershell\test\run.ps1:13">
+        <results>
+          <test-suite type="TestFixture" name="Default Stack" executed="True" result="Success" success="True" time="1.326" asserts="0" description="Default Stack">
+            <results>
+              <test-suite type="TestFixture" name="Default Stack.selenium" executed="True" result="Success" success="True" time="0.0566" asserts="0" description="Default Stack.selenium">
+                <results>
+                  <test-case description="image matches selenium/standalone-firefox:3" name="Default Stack.selenium.image matches selenium/standalone-firefox:3" time="0.0024" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="No ports are published" name="Default Stack.selenium.No ports are published" time="0.0027" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="TestFixture" name="Default Stack.db" executed="True" result="Success" success="True" time="0.1048" asserts="0" description="Default Stack.db">
+                <results>
+                  <test-case description="image matches postgres:.*" name="Default Stack.db.image matches postgres:.*" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="No ports are published" name="Default Stack.db.No ports are published" time="0.0015" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="TestFixture" name="Default Stack.mailhog" executed="True" result="Success" success="True" time="0.1553" asserts="0" description="Default Stack.mailhog">
+                <results>
+                  <test-case description="image matches mailhog/mailhog" name="Default Stack.mailhog.image matches mailhog/mailhog" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="No ports are published" name="Default Stack.mailhog.No ports are published" time="0.0015" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="TestFixture" name="Default Stack.exttests" executed="True" result="Success" success="True" time="0.2054" asserts="0" description="Default Stack.exttests">
+                <results>
+                  <test-case description="image matches moodlehq/moodle-exttests" name="Default Stack.exttests.image matches moodlehq/moodle-exttests" time="0.0038" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="No ports are published" name="Default Stack.exttests.No ports are published" time="0.0015" asserts="0" success="True" result="Success" executed="True" />
+                </results>
+              </test-suite>
+              <test-suite type="TestFixture" name="Default Stack.webserver" executed="True" result="Success" success="True" time="0.2766" asserts="0" description="Default Stack.webserver">
+                <results>
+                  <test-case description="image matches moodlehq/moodle-php-apache:7.4" name="Default Stack.webserver.image matches moodlehq/moodle-php-apache:7.4" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="No ports are published" name="Default Stack.webserver.No ports are published" time="0.0015" asserts="0" success="True" result="Success" executed="True" />
+                  <test-suite type="ParameterizedTest" name="&lt;Scenario&gt;.&lt;servicename&gt;.environment.&lt;Name&gt; = &lt;Value&gt;" executed="True" result="Success" success="True" time="0.0205" asserts="0" description="environment.&lt;Name&gt; = &lt;Value&gt;">
+                    <results>
+                      <test-case description="environment.MOODLE_DOCKER_APP = " name="Default Stack.webserver.environment.MOODLE_DOCKER_APP = " time="0.0029" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_APP_PORT = " name="Default Stack.webserver.environment.MOODLE_DOCKER_APP_PORT = " time="0.0041" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_PHPUNIT_EXTRAS = " name="Default Stack.webserver.environment.MOODLE_DOCKER_PHPUNIT_EXTRAS = " time="0.0016" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_WEB_PORT = " name="Default Stack.webserver.environment.MOODLE_DOCKER_WEB_PORT = " time="0.0016" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_BROWSER = firefox" name="Default Stack.webserver.environment.MOODLE_DOCKER_BROWSER = firefox" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_DBPASS = m@0dl3ing" name="Default Stack.webserver.environment.MOODLE_DOCKER_DBPASS = m@0dl3ing" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_DBUSER = moodle" name="Default Stack.webserver.environment.MOODLE_DOCKER_DBUSER = moodle" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_DBNAME = moodle" name="Default Stack.webserver.environment.MOODLE_DOCKER_DBNAME = moodle" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_WEB_HOST = localhost" name="Default Stack.webserver.environment.MOODLE_DOCKER_WEB_HOST = localhost" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                      <test-case description="environment.MOODLE_DOCKER_DBTYPE = pgsql" name="Default Stack.webserver.environment.MOODLE_DOCKER_DBTYPE = pgsql" time="0.0017" asserts="0" success="True" result="Success" executed="True" />
+                    </results>
+                  </test-suite>
+                </results>
+              </test-suite>
+              <test-case description="Services = db, exttests, mailhog, selenium, webserver" name="Default Stack.Services = db, exttests, mailhog, selenium, webserver" time="0.003" asserts="0" success="True" result="Success" executed="True" />
+            </results>
+          </test-suite>
+        </results>
+      </test-suite>
+    </results>
+  </test-suite>
+</test-results>

@@ -1,165 +1,52 @@
-
 function ValOrEval([object]$Value) {
     if ($Value -is [scriptblock]) {
-        [string](& $Value)
+        $Value = & $Value
     }
-    else {
-        [string]$Value
-    }
+    $Value
 }
 
-function Expect([string]$type) {
-    switch ($type) {
-        'postgres' {
-            @{
-                webserver = @{
-                    environment = @{
-                        MOODLE_DOCKER_DBTYPE = 'pgsql'
-                    }
-                }
-                db        = @{
-                    Name    = 'db'
-                    Image   = 'postgres:.*'
-                    Ports   = $false
-                    Volumes = $false
-                }
-            }
+filter NormalizePath {
+    $_.ToString() -replace '(/|\\)+', '/'
+}
+
+
+function BaseDir([string]$Name) {
+    [system.io.path]::GetFullPath((Join-Path $PSScriptRoot '..' '..' $name))
+}
+
+function TestDir([string]$Name) {
+    [system.io.path]::GetFullPath((Join-Path $TestDrive $name))
+}
+
+function AssetDir([string]$Name) {
+    [system.io.path]::GetFullPath((Join-Path (BaseDir) 'assets' $name))
+}
+
+function StackArgs([hashtable]$params) {
+    foreach ($paramname in [array]$params.Keys) {
+        $params[$paramname] = ValOrEval $params[$paramname]
+    }
+    if (-Not $params.Contains('MOODLE_DOCKER_WWWROOT')) {
+        $params.MOODLE_DOCKER_WWWROOT = (TestDir MOODLE)
+    }
+    $params
+}
+
+function ArrayizeHashHash([hashtable]$hash) {
+    foreach ($item in $hash.GetEnumerator()) {
+        @{
+            Key   = $item.Key
+            Value = $item.Value
         }
     }
 }
 
-function webserver {
-    param(
-        $Php = '7.4',
-        $DbType = 'pgsql',
-        $Port,
-        $wwwroot,
-        $BrowserName = 'firefox',
-        $BrowserTag = '3'
-    )
-
-    $Expect = @{
-        Name        = 'webserver'
-        Image       = "moodlehq/moodle-php-apache:$Php"
-        Environment = @(
-            @{Name = 'MOODLE_DOCKER_DBTYPE'; Value = $DbType }
-            @{Name = 'MOODLE_DOCKER_DBNAME'; Value = 'moodle' }
-            @{Name = 'MOODLE_DOCKER_DBUSER'; Value = 'moodle' }
-            @{Name = 'MOODLE_DOCKER_DBPASS'; Value = 'm@0dl3ing' }
-            @{Name = 'MOODLE_DOCKER_BROWSER'; Value = 'firefox' }
-            @{Name = 'MOODLE_DOCKER_WEB_HOST'; Value = 'localhost' }
-        )
-        Volumes     = @(
-            @{
-                Target = '/var/www/html'
-                Source = $wwwroot
-                Type   = 'bind'
-            }
-        )
+function SetupStandardTestDirs {
+    foreach ($name in 'MOODLE', 'MOODLE2', 'APP_3.9.4', 'APP_3.9.5', 'FAILDUMP', 'FAILDUMP2') {
+        New-Item -ItemType Directory -Path (TestDir $name)
     }
-
-    if ($Port) {
-
-    }
+    @{version = '3.9.4' } | ConvertTo-Json | Set-Content (TestDir 'APP_3.9.4/package.json')
+    @{version = '3.9.5' } | ConvertTo-Json | Set-Content (TestDir 'APP_3.9.5/package.json')
 }
 
-function db {
-    param(
-        $Type = 'postgres'
-    )
 
-    switch ($Type) {
-        'postgres' {
-            @{
-                Name        = 'db'
-                Image       = 'postgres:.*'
-                Environment = @{
-                    POSTGRES_USER     = 'moodle'
-                    POSTGRES_PASSWORD = 'm@0dl3ing'
-                    POSTGRES_DB       = 'moodle'
-                }
-            }
-        }
-    }
-}
-
-function selenium {
-    param(
-        [ValidateSet('chrome', 'firefox')]$BrowserName = 'firefox',
-        $BrowserTag = '3',
-        $HostIp,
-        $HostPort
-    )
-
-    $expect = @{
-        Name  = 'selenium'
-        Image = "selenium/standalone-$($BrowserName):$($BrowserTag)"
-        Ports = $false
-    }
-
-    if ($Port) {
-        $expect.Ports = @(
-            @{ LocalPort = 5900; HostName = '127.0.0.1'; HostPort = 40 }
-        )
-    }
-}
-
-function exttests {
-    @{
-        Name    = 'exttests'
-        Image   = 'moodlehq/moodle-exttests'
-        Volumes = @(
-            @{
-                Target = '/etc/apache2/ports.conf'
-                Source = { AssetDir 'exttests/apache2_ports.conf' }
-                Type   = 'bind'
-            }
-            @{
-                Target = 'etc/apache2/sites-enabled/000-default.conf'
-                Source = { AssetDir 'exttests/apache2.conf' }
-                Type   = 'bind'
-            }
-        )
-        Ports   = $false
-    }
-
-}
-
-function externalservices {
-
-}
-
-function mailhog {
-
-}
-
-$TestStacks = @(
-    @{
-        Scenario = 'Default Stack'
-        Params   = @{}
-        Expected = @{
-            services = @(
-                webserver -Php '7.4' -Db postgres -Port $null -wwwroot { TestDir MOODLE } -BrowserName 'firefox' -BrowserTag '3'
-                db -Type 'postgres'
-                mailhog
-                exttests
-            )
-        }
-    }
-    @{
-        Scenario = 'Default Stack with mapped port'
-        Params   = @{
-            MOODLE_DOCKER_WEB_PORT = 40
-        }
-        Expected = @{
-            Services = @(
-                webserver -Php '7.4' -Db postgres -Port $null -wwwroot { TestDir MOODLE } -BrowserName 'firefox' -BrowserTag '3'
-                db -Type 'postgres'
-                mailhog
-                exttests
-            )
-        }
-    }
-)
-
-$TestStacks

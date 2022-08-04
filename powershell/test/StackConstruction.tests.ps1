@@ -1,21 +1,12 @@
 using module '../moodle-docker.psm1'
 
-
 Describe 'Stack Construction' {
 
     BeforeDiscovery {
         $stackspecs = . (Join-Path $PSScriptRoot 'teststacks.ps1')
         $stackspecs = $stackspecs | Where-Object { $_.Scenario -match 'selenium' }
 
-        function ArrayizeHashHash([hashtable]$hash) {
-            foreach($item in $hash.GetEnumerator()) {
-                @{
-                    Key = $item.Key
-                    Value = $item.Value
-                }
-            }
-        }
-    }
+     }
 
     BeforeAll {
         # Import-Module (Join-Path $PSScriptRoot '..' 'moodle-docker.psm1') -Force
@@ -64,7 +55,7 @@ Describe 'Stack Construction' {
             if (-Not $Params.ContainsKey('MOODLE_DOCKER_WWWROOT')) {
                 $Params.MOODLE_DOCKER_WWWROOT = TestDir MOODLE
             }
-            [Stack]$Stack = New-Stack $Params
+            $Stack = New-Stack $Params
             $stackyaml = $Stack.Invoke('convert') | ConvertFrom-Yaml
             $ExpectedServiceNames = ($expect.services.keys | Sort-Object) -join ', '
         }
