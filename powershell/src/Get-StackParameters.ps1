@@ -2,24 +2,6 @@ function Get-StackParams([hashtable]$PassedParams) {
     $ErrorActionPreference = 'stop'
     $DebugPreference = 'continue'
 
-    # function GetParamDefaults {
-    #     @{
-    #         # COMPOSE_PROJECT_NAME                    = 'moodle-docker'
-    #         MOODLE_DOCKER_DB                        = 'pgsql'
-    #         MOODLE_DOCKER_WWWROOT                   = $null
-    #         MOODLE_DOCKER_PHP_VERSION               = '7.4'
-    #         MOODLE_DOCKER_BROWSER                   = 'firefox:3'
-    #         MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES = $null
-    #         MOODLE_DOCKER_BEHAT_FAILDUMP            = $null
-    #         MOODLE_DOCKER_WEB_HOST                  = 'localhost'
-    #         MOODLE_DOCKER_WEB_PORT                  = $null
-    #         MOODLE_DOCKER_SELENIUM_VNC_PORT         = $null
-    #         MOODLE_DOCKER_APP_PATH                  = $null
-    #         MOODLE_DOCKER_APP_VERSION               = $null
-    #         MOODLE_DOCKER_APP_RUNTIME               = $null
-    #     }
-    # }
-
     $VALID_DB = 'pgsql', 'mysql', 'mssql', 'oracle', 'mariadb'
     $VALID_PHP_VERSION = '5.6', '7.0', '7.1', '7.2', '7.3', '7.4', '8.0'
     $VALID_APP_RUNTIME = 'ionic3', 'ionic5'
@@ -211,9 +193,6 @@ function Get-StackParams([hashtable]$PassedParams) {
         }
     }
 
-
-
-
     # Set defaults
     $StackParams = @{}
 
@@ -241,6 +220,12 @@ function Get-StackParams([hashtable]$PassedParams) {
 
     # Derive browser name and tag
     $StackParams.MOODLE_DOCKER_BROWSER_NAME, $StackParams.MOODLE_DOCKER_BROWSER_TAG = GetBrowserNameAndTag $StackParams.MOODLE_DOCKER_BROWSER
+
+    # Determine selenium suffix
+    $StackParams.MOODLE_DOCKER_SELENIUM_SUFFIX = ''
+    if ($StackParams.MOODLE_DOCKER_SELENIUM_VNC_PORT) {
+        $StackParams.MOODLE_DOCKER_SELENIUM_SUFFIX = '-debug'
+    }
 
     return $StackParams
 }

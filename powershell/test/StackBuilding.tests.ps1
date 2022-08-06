@@ -1,26 +1,16 @@
-using module '../moodle-docker.psm1'
+# using module '../moodle-docker.psm1'
 
-Describe 'Stack Construction' {
+
+Describe 'Stack Building' {
 
     BeforeDiscovery {
         $stackspecs = . (Join-Path $PSScriptRoot 'teststacks.ps1')
-        $stackspecs = $stackspecs | Where-Object { $_.Scenario -match 'selenium' }
-
-     }
+        # $stackspecs = $stackspecs | Where-Object { $_.Scenario -match 'selenium' }
+    }
 
     BeforeAll {
-        # Import-Module (Join-Path $PSScriptRoot '..' 'moodle-docker.psm1') -Force
-        function TestDir([string]$Name) {
-            Join-Path $TestDrive $name
-        }
-
-        function BaseDir([string]$Name) {
-            Join-Path (Split-Path $PSScriptRoot) $name
-        }
-
-        function AssetDir([string]$Name) {
-            Join-Path (BaseDir) 'assets' $name
-        }
+        Import-Module (Join-Path $PSScriptRoot '..' 'moodle-docker.psm1') -Force
+        . (Join-Path $PSScriptRoot 'helpers.ps1')
 
         foreach ($name in 'MOODLE', 'MOODLE2', 'APP_3.9.4', 'APP_3.9.5', 'FAILDUMP', 'FAILDUMP2') {
             New-Item -ItemType Directory -Path (TestDir $name)
@@ -41,7 +31,7 @@ Describe 'Stack Construction' {
     }
 
     # Context '<Scenario>' -ForEach ($stackspecs.GetEnumerator() | ForEach-Object { @{Scenario = $spec.key; spec = $spec.value }}) {
-    Describe '<Scenario>' -ForEach $stackspecs {
+    Context '<Scenario>' -ForEach $stackspecs {
 
         BeforeDiscovery {
             $ExpectedServices = foreach ($svc in $expect.services.GetEnumerator()) {
@@ -78,7 +68,12 @@ Describe 'Stack Construction' {
                     }
                 }
                 $expectPorts = if ($ports -is [hashtable]) {
-                    ArrayizeHashHash($ports)
+                    foreach ($port in $ports.GetEnumerator()) {
+                        @{
+                            Key   = $port.Key
+                            Value = $port.Value
+                        }
+                    }
                 }
                 else {
                     @()

@@ -67,7 +67,7 @@ function merge([hashtable]$hash1, [hashtable]$hash2) {
 $stackspecs = & {
     (default)
     merge (default) @{
-        Scenario = 'Default Stack with mapped port'
+        Scenario = "MOODLE_DOCKER_WEB_PORT = '40'"
         Params   = @{
             MOODLE_DOCKER_WEB_PORT = '40'
         }
@@ -87,7 +87,7 @@ $stackspecs = & {
 
     foreach ($php in ($VALID_PHP_VERSION | Where-Object { $_ -ne $DEFAULT_PHP_VERSION })) {
         merge (default) @{
-            Scenario = "Default Stack with php = $php"
+            Scenario = "MOODLE_DOCKER_PHP_VERSION = $php"
             Params   = @{
                 MOODLE_DOCKER_PHP_VERSION = $php
             }
@@ -104,6 +104,7 @@ $stackspecs = & {
     foreach ($db in 'mysql', 'mssql', 'oracle', 'mariadb') {
         merge (default) @{
             Scenario = "Default Stack with $db"
+            Tags = 'db'
             Params   = @{
                 MOODLE_DOCKER_DB = $db
             }
@@ -231,6 +232,7 @@ $stackspecs = & {
     }
     merge (default) @{
         Scenario = 'Selenium Chrome'
+        Tags = 'selenium'
         Params   = @{
             MOODLE_DOCKER_BROWSER = 'chrome'
         }
@@ -261,7 +263,7 @@ $stackspecs = & {
                     }
                 }
                 selenium  = @{
-                    image = 'selenium/standalone-debug:chrome:3'
+                    image = 'selenium/standalone-chrome-debug:3'
                     ports = @{
                         '5900' = @{ HostName = '127.0.0.1'; HostPort = '41'}
                     }
@@ -272,7 +274,32 @@ $stackspecs = & {
 
 }
 
+$testfile = Join-Path $PSScriptRoot 'testastack.ps1'
+# function TestAStack([hashtable]$stackspec) {
+#     $container = New-PesterContainer -Data $stackspec -Path ($Using:testfile)
+#         $config = New-PesterConfiguration @{
+#             Run = @{
+#                 Container = $container
+#             }
+#         }
+#         # Invoke-Pester -Container $container -Output None
+#         Invoke-Pester -Configuration $config
+# }
+
+if ($true) {
+    $stackspecs[0..0] | ForEach-Object -ThrottleLimit ($stackspecs.count) -Parallel {
+        $container = New-PesterContainer -Data $_ -Path ($Using:testfile)
+        $config = New-PesterConfiguration @{
+            Run = @{
+                Container = $container
+            }
+        }
+        # Invoke-Pester -Container $container -Output None
+        Invoke-Pester -Configuration $config
+    }
+}
+
 # With selenium debug
 # With chrome browser
 
-$stackspecs
+# $stackspecs

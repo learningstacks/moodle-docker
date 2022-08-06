@@ -37,86 +37,23 @@ function GetDockerComposeVersion {
     }
 }
 
-    function GetBaseInvocation {
-        if (-Not $BASE_INVOCATION ) {
-            if (GetDockerComposeVersion -ge [version]'2.0') {
-                $BASE_INVOCATION.ComposeExe = 'docker'
-                $BASE_INVOCATION.ComposeCommandArgs = @('compose')
-            }
-            else {
-                $BASE_INVOCATION.ComposeExe = 'docker-compose'
-                $BASE_INVOCATION.ComposeCommandArgs = @()
+function GetBaseInvocation {
+    if (-Not $BASE_INVOCATION ) {
+        if (GetDockerComposeVersion -ge [version]'2.0') {
+            $BASE_INVOCATION = @{
+                ComposeExe         = 'docker'
+                ComposeCommandArgs = @('compose')
             }
         }
-        return $BASE_INVOCATION.Clone()
+        else {
+            $BASE_INVOCATION = @{
+                ComposeExe         = 'docker-compose'
+                ComposeCommandArgs = @()
+            }
+        }
     }
-
-
-# $Defaults = @{
-#     COMPOSE_PROJECT_NAME                    = 'moodle-docker'
-#     MOODLE_DOCKER_WWWROOT                   = $null
-#     MOODLE_DOCKER_WEB_HOST                  = 'localhost'
-#     MOODLE_DOCKER_WEB_PORT                  = $null
-#     MOODLE_DOCKER_PHP_VERSION               = '7.4'
-#     MOODLE_DOCKER_BEHAT_FAILDUMP            = $null
-
-#     MOODLE_DOCKER_DB                        = 'pgsql'
-
-#     MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES = $null
-
-#     MOODLE_DOCKER_SELENIUM_VNC_PORT         = $null
-#     MOODLE_DOCKER_BROWSER                   = 'firefox:3'
-
-#     MOODLE_DOCKER_APP_PATH                  = $null
-#     MOODLE_DOCKER_APP_VERSION               = $null
-#     MOODLE_DOCKER_APP_RUNTIME               = $null
-# }
-
-
-
-# $ParameterDef = @{
-#     COMPOSE_PROJECT_NAME                    = @{
-#         Default = 'moodle-docker'
-#         Validation = {
-#         }
-#     }
-#     MOODLE_DOCKER_WWWROOT                   = @{
-#         Default = null
-#     }
-#     MOODLE_DOCKER_WEB_HOST                  = @{
-#         Default = 'localhost'
-#     }
-#     MOODLE_DOCKER_WEB_PORT                  = @{
-#         Default = $null
-#     }
-#     MOODLE_DOCKER_PHP_VERSION               = @{
-#         Default = '7.4'
-#     }
-#     MOODLE_DOCKER_BEHAT_FAILDUMP            = @{
-#         Default = $null
-#     }
-#     MOODLE_DOCKER_DB                        = @{
-#         Default = 'pgsql'
-#     }
-#     MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES = @{
-#         Default = $null
-#     }
-#     MOODLE_DOCKER_SELENIUM_VNC_PORT         = @{
-#         Default = $null
-#     }
-#     MOODLE_DOCKER_BROWSER                   = @{
-#         Default = 'firefox:3'
-#     }
-#     MOODLE_DOCKER_APP_PATH                  = @{
-#         Default = $null
-#     }
-#     MOODLE_DOCKER_APP_VERSION               = @{
-#         Default = $null
-#     }
-#     MOODLE_DOCKER_APP_RUNTIME               = @{
-#         Default = $null
-#     }
-# }
+    return $BASE_INVOCATION.Clone()
+}
 
 <#
     .SYNOPSIS
@@ -217,15 +154,13 @@ function Invoke-Exec {
     $out
 }
 
+
+
 class Stack {
     [hashtable]$PassedParams
     [hashtable]$StackParams
     [hashtable]$Defaults
     [System.Collections.ArrayList]$ComposeFiles = @()
-
-    # [hashtable]$BaseInvocation = $null
-    # [string]$ComposeExe
-    # [string[]]$ComposeCommandArgs
     [string[]]$ComposeFilePaths = @(
         $PWD
         $BASEDIR
@@ -234,7 +169,6 @@ class Stack {
     Stack([hashtable]$StackParams, [string[]]$ComposeFiles) {
         $this.StackParams = $StackParams
         $this.ComposeFiles = $ComposeFiles
-        # $this.SetupDocker()
     }
 
     Stack([hashtable]$Params) {
@@ -242,346 +176,11 @@ class Stack {
         $this.PassedParams = $Params.Clone()
         $this.StackParams = Get-StackParams $this.PassedParams
         $this.ComposeFiles = Get-ComposeFiles $this.StackParams $this.ComposeFilePaths
-        # $this.SetupDocker()
-        # $this.StackParams = @{
-        #     BASEDIR                       = $script:BASEDIR
-        #     ASSETDIR                      = (Join-Path $script:BASEDIR 'assets')
-        #     COMPOSE_CONVERT_WINDOWS_PATHS = 'true'
-        #     COMPOSE_PATH_SEPERATOR        = ';'
-        # }
-        # $this.ComposeFiles = [System.Collections.ArrayList]::New()
-        # $this.SetEnvironment()
-        # $this.ValidateEnvironment()
-        # $this.SetComposeFiles()
     }
-
-    # static [hashtable] GetBaseInvocation() {
-    #     if (-Not [Stack]::BaseInvocation ) {
-    #         if ($this.GetDockerComposeVersion() -ge [version]'2.0') {
-    #             [Stack]::BaseInvocation.ComposeExe = 'docker'
-    #             [Stack]::BaseInvocation.ComposeCommandArgs = @('compose')
-    #         }
-    #         else {
-    #             [Stack]::BaseInvocations.ComposeExe = 'docker-compose'
-    #             [Stack]::BaseInvocation.ComposeCommandArgs = @()
-    #         }
-    #     }
-    #     return [Stack]::BaseInvocation.Clone()
-    # }
-
-    # [hashtable] GetParams([hashtable]$PassedParams) {
-    #     $StackParams = $script:Defaults.Clone()
-    #     foreach ($name in $PassedParams.Keys) {
-    #         if (-Not $StackParams.ContainsKey()) {
-    #             throw "Unrecognized Parameter $name"
-    #         }
-    #     }
-    #     foreach ($Name in $StackParams.Keys) {
-    #         $envpath = "Env:$Name"
-    #         $StackParams[$name] = switch ($Name) {
-    #             { $PassedParams.ContainsKey($Name) } { [string]($PassedParams[$name]); break }
-    #             { Test-Path $envpath } { (Get-Item $envpath).Value; break }
-    #         }
-    #     }
-    # }
-
-    # Set environment first from passed parameters, then then $Env then default
-    # [void] SetEnvironment() {
-    #     foreach ($Name in $script:Defaults.Keys) {
-    #         $envpath = "Env:$Name"
-    #         $this.StackParams.$Name = switch ($Name) {
-    #             { $this.PassedParams.ContainsKey($Name) } { [string]($this.PassedParams.$name); break }
-    #             { Test-Path $envpath } { (Get-Item $envpath).Value; break }
-    #             default { $script:Defaults.$Name }
-    #         }
-    #     }
-    # }
-
-    # [string] EnvOrDefault([string]$Name, [string]$Default) {
-    #     if ($this.StackParams.ContainsKey($Name)) {
-    #         return [string]$this.StackParams.$name
-    #     }
-    #     else {
-    #         return $default
-    #     }
-    # }
-
-    # # Validate, normalize and derive environment values
-    # [void] ValidateEnvironment() {
-    #     # webserver
-    #     $this.AssertDirExists('MOODLE_DOCKER_WWWROOT')
-    #     $this.AssertInSet('MOODLE_DOCKER_PHP_VERSION', $script:VALID_PHP_VERSION)
-    #     $this.NormalizeHostPort('MOODLE_DOCKER_WEB_PORT')
-
-    #     # db
-    #     $db = $this.EnvOrDefault('MOODLE_DOCKER_DB', $null)
-    #     if ($db) {
-    #         $this.AssertInSet('MOODLE_DOCKER_DB', $script:VALID_DB)
-    #     }
-    #     else {
-    #         $this.StackParams.MOODLE_DOCKER_DB = 'pgsql'
-    #     }
-
-    #     # selenium
-    #     $this.NormalizeHostPort('MOODLE_DOCKER_SELENIUM_VNC_PORT')
-    #     $this.AssertMatch('MOODLE_DOCKER_BROWSER', $script:VALID_BROWSER)
-    #     $this.StackParams.MOODLE_DOCKER_BROWSER_NAME = $this.GetBrowserName()
-    #     $this.StackParams.MOODLE_DOCKER_BROWSER_TAG = $this.GetBrowserTag()
-
-    #     # moodleapp
-    #     if ($this.StackParams.MOODLE_DOCKER_APP_PATH -and $this.StackParams.MOODLE_DOCKER_APP_VERSION) {
-    #         throw 'Cannot specify both MOODLE_DOCKERAPP_PATH and MOODLE_DOCKER_APP_VERSION'
-    #     }
-    #     if ($this.StackParams.MOODLE_DOCKER_APP_PATH) {
-    #         $this.AssertDirExists('MOODLE_DOCKER_APP_PATH')
-    #     }
-    #     if ($Value = $this.StackParams.MOODLE_DOCKER_APP_VERSION) {
-    #         try { [version]$Value }
-    #         catch { throw "'MOODLE_DOCKER_APP_VERSION' ($Value) is not a valid version" }
-    #     }
-    #     $this.StackParams.MOODLE_DOCKER_APP_RUNTIME = $this.GetAppRuntime()
-    # }
-
-    # [string[]] SetComposeFiles([hashtable]$Environment) {
-
-    #     $Files = @(
-    #         @{
-    #             FileName  = 'base.yml'
-    #             Condition = { $true }
-    #         }
-    #         @{
-    #             FileName  = 'service.mail.yml'
-    #             Condition = { $true }
-    #         }
-    #         @{
-    #             FileName  = "db.$($Environment.MOODLE_DOCKER_DB).yml"
-    #             Condition = { $Environment.MOODLE_DOCKER_DB -ne 'pgsql' }
-    #         }
-    #         @{
-    #             FileName  = "db.$($Environment.MOODLE_DOCKER_DB).$($Environment.MOODLE_DOCKER_PHP_VERSION).yml"
-    #             Condition = { $ComposeFile -and (Test-Path $ComposeFile -PathType Leaf) }
-    #         }
-    #         @{
-    #             FileName  = "selenium.$($Environment.MOODLE_DOCKER_BROWSER_NAME).yml"
-    #             Condition = { $Environment.MOODLE_DOCKER_BROWSER_NAME -ne 'firefox' }
-    #         }
-    #         @{
-    #             FileName  = 'selenium.debug.yml'
-    #             Condition = { $Environment.MOODLE_DOCKER_SELENIUM_VNC_PORT }
-    #         }
-    #         @{
-    #             FileName  = "moodle-app-dev-$($Environment.MOODLE_DOCKER_APP_RUNTIME).yml"
-    #             Condition = { $Environment.MOODLE_DOCKER_APP_PATH }
-    #         }
-    #         @{
-    #             FileName  = "moodle-app-$($Environment.MOODLE_DOCKER_APP_RUNTIME).yml"
-    #             Condition = { $Environment.MOODLE_DOCKER_APP_VERSION }
-    #         }
-    #         @{
-    #             FileName  = 'phpunit-external-services.yml'
-    #             Condition = { $Environment.MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES }
-    #         }
-    #         @{
-    #             FileName  = 'webserver.port.yml'
-    #             Condition = { $Environment.MOODLE_DOCKER_WEB_PORT }
-    #         }
-    #         @{
-    #             FileName  = 'volumes-cached.yml'
-    #             Condition = { $global:IsMacOs }
-    #         }
-
-    #         foreach ($File in $Rules) {
-
-    #         }
-    #     )
-    # }
-
-    # @{
-    #     File      = $this.StackParams.MOODLE_DOCKER_BROWSER_NAME -ne 'firefox'
-    #     Condition = { "selenium.$($this.StackParams.MOODLE_DOCKER_BROWSER_NAME).yml" }
-    # }
-    # [void] SetComposeFiles() {
-    #     $this.AddComposeFile(
-    #         'base.yml',
-    #         { $true }
-    #     )
-    #     $this.AddComposeFile('service.mail.yml', { $true } )
-    #     $this.AddComposeFile(
-    #         "db.$($this.StackParams.MOODLE_DOCKER_DB).yml",
-    #         { $this.StackParams.MOODLE_DOCKER_DB -ne 'pgsql' }
-    #     )
-    #     $this.AddComposeFile(
-    #         "db.$($this.StackParams.MOODLE_DOCKER_DB).$($this.StackParams.MOODLE_DOCKER_PHP_VERSION).yml",
-    #         { $ComposeFile -and (Test-Path $ComposeFile -PathType Leaf) }
-    #     )
-    #     $this.AddComposeFile(
-    #         "selenium.$($this.StackParams.MOODLE_DOCKER_BROWSER_NAME).yml",
-    #         { $this.StackParams.MOODLE_DOCKER_BROWSER_NAME -ne 'firefox' })
-    #     $this.AddComposeFile(
-    #         'selenium.debug.yml',
-    #         { $this.StackParams.MOODLE_DOCKER_SELENIUM_VNC_PORT }
-    #     )
-    #     $this.AddComposeFile(
-    #         "moodle-app-dev-$($this.StackParams.MOODLE_DOCKER_APP_RUNTIME).yml",
-    #         { $this.StackParams.MOODLE_DOCKER_APP_PATH }
-    #     )
-    #     $this.AddComposeFile(
-    #         "moodle-app-$($this.StackParams.MOODLE_DOCKER_APP_RUNTIME).yml",
-    #         { $this.StackParams.MOODLE_DOCKER_APP_VERSION }
-    #     )
-    #     $this.AddComposeFile(
-    #         'phpunit-external-services.yml',
-    #         { $this.StackParams.MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES }
-    #     )
-    #     $this.AddComposeFile(
-    #         'webserver.port.yml',
-    #         { $this.StackParams.MOODLE_DOCKER_WEB_PORT }
-    #     )
-    #     $this.AddComposeFile(
-    #         'volumes-cached.yml',
-    #         { $global:IsMacOs }
-    #     )
-    # }
 
     [boolean] IncludesApp() {
         return ($this.StackParams.MOODLE_DOCKER_APP_PATH -or $this.StackParams.MOODLE_DOCKER_APP_VERSION)
     }
-
-    # [string] GetAppRuntime() {
-    #     # If neither app path nor app version are specified, return $null
-    #     if (-Not $this.StackParams.MOODLE_DOCKER_APP_PATH -or $this.StackParams.MOODLE_DOCKER_APP_VERSION) {
-    #         return $null
-    #     }
-
-    #     # If $Value is set verify it is a valid runtime and return it
-    #     if ($this.StackParams.MOODLE_DOCKER_APP_RUNTIME) {
-    #         $this.AssertInSet('MOODLE_DOCKER_APP_RUNTIME', $this.StackParams.MOODLE_DOCKER_APP_RUNTIME, $script:VALID_APP_RUNTIME)
-    #         return $this.StackParams.MOODLE_DOCKER_APP_RUNTIME
-    #     }
-
-    #     # Infer runtime from version
-    #     $AppVersion = $this.GetAppVersion()
-    #     if (-Not $AppVersion) {
-    #         throw 'Unable to determine AppVersion'
-    #     }
-
-    #     if ($appversion -ge [version]'3.9.5') { return 'ionic5' } else { return 'ionic3' }
-    # }
-
-
-
-    # [version] GetAppVersion() {
-    #     if ($this.StackParams.MOODLE_DOCKER_APP_VERSION) {
-    #         return $this.StackParams.MOODLE_DOCKER_APP_VERSION
-    #     }
-    #     elseif ($this.StackParams.MOODLE_DOCKER_APP_PATH) {
-    #         $pkgfile = Join-Path $this.StackParams.MOODLE_DOCKER_APP_PATH 'package.json'
-    #         $package = Get-Content $pkgfile | ConvertFrom-Json -Depth 5 -ErrorAction Stop
-    #         if (-Not $package.ContainsKey('version') -or (-Not $package.version)) {
-    #             throw "$pkgfile does not specify version"
-    #         }
-    #         return $package.version
-    #     }
-    #     else {
-    #         return $null
-    #     }
-    # }
-
-    # [void] NormalizeHostPort([string]$ParameterName) {
-    #     $value = $this.EnvOrDefault($ParameterName, $null)
-    #     $valid = $value -match $script:VALID_HOST_PORT
-    #     if (-Not $value) {
-    #         $this.StackParams[$ParameterName] = $null #ensure value
-    #     }
-    #     elseif (-Not $valid) {
-    #         throw "$ParameterName ($_) must be a port number greater than 0 or string in the form <HOST>:<port>"
-    #     }
-    #     elseif (-Not $Matches.ContainsKey('HOST')) {
-    #         $this.StackParams[$ParameterName] = "127.0.0.1:$($value)"
-    #     }
-    #     # else no changes
-    # }
-
-    # [string] GetBrowserName() {
-    #     $null = $this.StackParams.MOODLE_DOCKER_BROWSER -match $script:VALID_BROWSER
-    #     return $Matches.NAME
-    # }
-
-    # [string] GetBrowserTag() {
-    #     $null = $this.StackParams.MOODLE_DOCKER_BROWSER -match $script:VALID_BROWSER
-    #     $Value = switch ($Matches) {
-    #         { $_.ContainsKey('TAG') } { $_.TAG; break }
-    #         { $_.NAME -eq 'firefox' } { '3'; break }
-    #         { $_.NAME -eq 'chrome' } { '3'; break }
-    #         default {
-    #             throw "Unsupported Browser $($_.NAME)"
-    #         }
-    #     }
-    #     return $Value
-    # }
-
-    # [void] IncludeComposeFile([string]$FileName, [scriptblock]$Condition) {
-
-    #     # Search for a file with the given name in ComposeFilePaths
-    #     $ComposeFile = $this.ComposeFilePaths | `
-    #             Join-Path -ChildPath $FileName | `
-    #             Where-Object { Test-Path $_ -PathType Leaf } | `
-    #             Select-Object -First 1
-
-    #     # If file should be included
-    #     if (& $Condition ) {
-    #         if (-Not $ComposeFile) {
-    #             throw "$FileName not found"
-    #         }
-    #         else {
-    #             $this.ComposeFiles.Add($ComposeFile)
-    #         }
-    #     }
-    # }
-
-    # [void] AddComposeFile([string]$FileName, [scriptblock]$Condition) {
-
-    #     # Find the file
-    #     $ComposeFile = $this.ComposeFilePaths | `
-    #             Join-Path -ChildPath $FileName | `
-    #             Where-Object { Test-Path $_ -PathType Leaf } | `
-    #             Select-Object -First 1
-
-    #     $Include = & $Condition
-    #     if ($Include) {
-    #         if (-Not $ComposeFile) {
-    #             throw "$FileName not found"
-    #         }
-    #         else {
-    #             $this.ComposeFiles.Add($ComposeFile)
-    #         }
-    #     }
-    # }
-
-    #region ASSERTIONS
-
-    # [void] AssertDirExists([string]$Name) {
-    #     $Value = $this.StackParams.$Name
-    #     if (-Not $Value -or -Not (Test-Path $Value -PathType Container)) {
-    #         throw "$Name references non-existing directory ($Value)"
-    #     }
-    # }
-
-    # [void] AssertInSet([string]$Name, [string[]]$Set) {
-    #     $Value = $this.StackParams.$Name
-    #     if (-Not ($Set -contains $Value)) {
-    #         throw "$Name ($Value) must be one of $($Set -join ', ')"
-    #     }
-    # }
-
-    # [void] AssertMatch([string]$Name, [string]$Regex) {
-    #     $Value = $this.StackParams.$Name
-    #     if ($Value -notmatch $Regex) {
-    #         throw "$Name ($value) must match $Regex"
-    #     }
-    # }
-
-    #endRegion ASSERTIONS
 
     [void] start() {
         $this.Invoke('up -d')
