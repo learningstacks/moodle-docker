@@ -129,8 +129,6 @@ function Get-StackParams([hashtable]$PassedParams) {
     $ErrorActionPreference = 'stop'
     $DebugPreference = 'continue'
 
-
-
     $ParameterDefs = [ordered]@{
         MOODLE_DOCKER_DB                        = @{
             Default    = 'pgsql'

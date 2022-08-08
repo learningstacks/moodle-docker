@@ -157,7 +157,7 @@ function Invoke-Exec {
 
 
 class Stack {
-    [hashtable]$PassedParams
+    [hashtable]$StackArgs
     [hashtable]$StackParams
     [hashtable]$Defaults
     [System.Collections.ArrayList]$ComposeFiles = @()
@@ -171,10 +171,10 @@ class Stack {
         $this.ComposeFiles = $ComposeFiles
     }
 
-    Stack([hashtable]$Params) {
+    Stack([hashtable]$StackArgs) {
         $ErrorActionPreference = 'Stop'
-        $this.PassedParams = $Params.Clone()
-        $this.StackParams = Get-StackParams $this.PassedParams
+        $this.StackArgs = $StackArgs
+        $this.StackParams = Get-StackParams $this.StackArgs
         $this.ComposeFiles = Get-ComposeFiles $this.StackParams $this.ComposeFilePaths
     }
 
@@ -244,10 +244,10 @@ class Stack {
 function New-Stack {
     param(
         [Parameter(Mandatory)]
-        [hashtable]$StackParams
+        [hashtable]$StackArgs
     )
 
-    [Stack]::New($StackParams)
+    [Stack]::New($StackArgs)
 }
 
 function Get-Stack {
