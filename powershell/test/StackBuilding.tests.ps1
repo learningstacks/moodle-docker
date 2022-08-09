@@ -4,37 +4,29 @@
 Describe 'Stack Building' {
 
     BeforeDiscovery {
-        $stackspecs = . (Join-Path $PSScriptRoot 'teststacks.ps1')
+        $stackspecs = . (Join-Path $PSScriptRoot 'StackBuilding.testdata.ps1')
         # $stackspecs = $stackspecs | Where-Object { $_.Scenario -match 'selenium' }
     }
 
     BeforeAll {
         Import-Module (Join-Path $PSScriptRoot '..' 'moodle-docker.psm1') -Force
         . (Join-Path $PSScriptRoot 'helpers.ps1')
-
-        foreach ($name in 'MOODLE', 'MOODLE2', 'APP_3.9.4', 'APP_3.9.5', 'FAILDUMP', 'FAILDUMP2') {
-            New-Item -ItemType Directory -Path (TestDir $name)
-        }
-        @{version = '3.9.4' } | ConvertTo-Json | Set-Content (TestDir 'APP_3.9.4/package.json')
-        @{version = '3.9.5' } | ConvertTo-Json | Set-Content (TestDir 'APP_3.9.5/package.json')
+        SetupStandardTestDirs
     }
 
     AfterEach {
-        Get-ChildItem env: | Where-Object { $_.Name -match '^(MOODLE|COMPOSE)' } | ForEach-Object {
-            Remove-Item "Env:$($_.Name)"
-        }
+        ResetEnvironment
     }
 
     AfterAll {
-        #Delete all files and directories in TestDrive:
-        Get-ChildItem 'TestDrive:/' | Remove-Item -Force -Recurse
+        ClearTestDrive
     }
 
     # Context '<Scenario>' -ForEach ($stackspecs.GetEnumerator() | ForEach-Object { @{Scenario = $spec.key; spec = $spec.value }}) {
     Context '<Scenario>' -ForEach $stackspecs {
 
         BeforeDiscovery {
-            $ExpectedServices = foreach ($svc in $expect.services.GetEnumerator()) {
+            $ExpectedServices = foreach ($svc in $expectyaml.services.GetEnumerator()) {
                 $h = $svc.value
                 $h.servicename = $svc.name
                 $h
@@ -47,7 +39,7 @@ Describe 'Stack Building' {
             }
             $Stack = New-Stack $Params
             $stackyaml = $Stack.Invoke('convert') | ConvertFrom-Yaml
-            $ExpectedServiceNames = ($expect.services.keys | Sort-Object) -join ', '
+            $ExpectedServiceNames = ($expectyaml.services.keys | Sort-Object) -join ', '
         }
 
         It 'Services = <ExpectedServiceNames>' {

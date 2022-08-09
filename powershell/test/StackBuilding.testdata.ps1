@@ -8,8 +8,8 @@ $DEFAULT_DB = 'pgsql'
 function default {
     @{
         Scenario = 'Default Stack'
-        Params   = @{}
-        expect   = @{
+        StackArgs = @{}
+        expectyaml = @{
             services = @{
                 webserver = @{
                     image       = 'moodlehq/moodle-php-apache:7.4'
@@ -68,16 +68,16 @@ $stackspecs = & {
     (default)
     merge (default) @{
         Scenario = "MOODLE_DOCKER_WEB_PORT = '40'"
-        Params   = @{
+        StackArgs = @{
             MOODLE_DOCKER_WEB_PORT = '40'
         }
-        expect   = @{
+        expectyaml = @{
             services = @{
                 webserver = @{
                     environment = @{
                         MOODLE_DOCKER_WEB_PORT = '127.0.0.1:40'
                     }
-                    ports = @{
+                    ports       = @{
                         '80' = @{ HostName = '127.0.0.1'; HostPort = 40 }
                     }
                 }
@@ -88,10 +88,10 @@ $stackspecs = & {
     foreach ($php in ($VALID_PHP_VERSION | Where-Object { $_ -ne $DEFAULT_PHP_VERSION })) {
         merge (default) @{
             Scenario = "MOODLE_DOCKER_PHP_VERSION = $php"
-            Params   = @{
+            StackArgs = @{
                 MOODLE_DOCKER_PHP_VERSION = $php
             }
-            expect   = @{
+            expectyaml = @{
                 services = @{
                     webserver = @{
                         image = "moodlehq/moodle-php-apache:$php"
@@ -104,11 +104,11 @@ $stackspecs = & {
     foreach ($db in 'mysql', 'mssql', 'oracle', 'mariadb') {
         merge (default) @{
             Scenario = "Default Stack with $db"
-            Tags = 'db'
-            Params   = @{
+            Tags     = 'db'
+            StackArgs = @{
                 MOODLE_DOCKER_DB = $db
             }
-            expect   = @{
+            expectyaml = @{
                 services = switch ($db) {
                     'mysql' {
                         @{
@@ -184,11 +184,11 @@ $stackspecs = & {
     }
     merge (default) @{
         Scenario = 'Default Stack with mssql db and php 5.6'
-        Params   = @{
+        StackArgs = @{
             MOODLE_DOCKER_DB          = 'mssql'
             MOODLE_DOCKER_PHP_VERSION = '5.6'
         }
-        expect   = @{
+        expectyaml = @{
             services = @{
                 webserver = @{
                     image       = 'moodlehq/moodle-php-apache:5.6'
@@ -211,10 +211,10 @@ $stackspecs = & {
 
     merge (default) @{
         Scenario = 'Default Stack with external services'
-        Params   = @{
+        StackArgs = @{
             MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES = 'true'
         }
-        expect   = @{
+        expectyaml = @{
             services = @{
                 webserver  = @{
                     environment = @{
@@ -232,11 +232,11 @@ $stackspecs = & {
     }
     merge (default) @{
         Scenario = 'Selenium Chrome'
-        Tags = 'selenium'
-        Params   = @{
+        Tags     = 'selenium'
+        StackArgs = @{
             MOODLE_DOCKER_BROWSER = 'chrome'
         }
-        expect   = @{
+        expectyaml = @{
             services = @{
                 webserver = @{
                     environment = @{
@@ -251,11 +251,11 @@ $stackspecs = & {
     }
     merge (default) @{
         Scenario = 'Selenium Chrome debug'
-        Params   = @{
-            MOODLE_DOCKER_BROWSER = 'chrome'
+        StackArgs = @{
+            MOODLE_DOCKER_BROWSER           = 'chrome'
             MOODLE_DOCKER_SELENIUM_VNC_PORT = '41'
         }
-        expect   = @{
+        expectyaml = @{
             services = @{
                 webserver = @{
                     environment = @{
@@ -265,7 +265,7 @@ $stackspecs = & {
                 selenium  = @{
                     image = 'selenium/standalone-chrome-debug:3'
                     ports = @{
-                        '5900' = @{ HostName = '127.0.0.1'; HostPort = '41'}
+                        '5900' = @{ HostName = '127.0.0.1'; HostPort = '41' }
                     }
                 }
             }
@@ -274,9 +274,11 @@ $stackspecs = & {
 
 }
 
-$testfile = Join-Path $PSScriptRoot 'testastack.ps1'
-# function TestAStack([hashtable]$stackspec) {
-#     $container = New-PesterContainer -Data $stackspec -Path ($Using:testfile)
+$stackspecs
+# if ($true) {
+#     $testfile = Join-Path $PSScriptRoot 'testastack.ps1'
+#     $stackspecs[0..0] | ForEach-Object -ThrottleLimit ($stackspecs.count) -Parallel {
+#         $container = New-PesterContainer -Data $_ -Path ($Using:testfile)
 #         $config = New-PesterConfiguration @{
 #             Run = @{
 #                 Container = $container
@@ -284,22 +286,5 @@ $testfile = Join-Path $PSScriptRoot 'testastack.ps1'
 #         }
 #         # Invoke-Pester -Container $container -Output None
 #         Invoke-Pester -Configuration $config
+#     }
 # }
-
-if ($true) {
-    $stackspecs[0..0] | ForEach-Object -ThrottleLimit ($stackspecs.count) -Parallel {
-        $container = New-PesterContainer -Data $_ -Path ($Using:testfile)
-        $config = New-PesterConfiguration @{
-            Run = @{
-                Container = $container
-            }
-        }
-        # Invoke-Pester -Container $container -Output None
-        Invoke-Pester -Configuration $config
-    }
-}
-
-# With selenium debug
-# With chrome browser
-
-# $stackspecs

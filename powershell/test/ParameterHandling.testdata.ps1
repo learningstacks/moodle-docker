@@ -165,19 +165,9 @@ $testspecs = @{
                 , @( $true, $null, 'true')
                 , @( 'abc', $null, 'true')
                 , @( '', $null, $null)
-                , @( $false, $null, $null)
-                , @( $false, 'abc', 'true')
+                , @( $null, 'abc', 'true')
             )
         }
-        Default   = $null
-        ValidVals = @(
-            , @('', $null)
-            , @('true', 'true')
-            , @($null, $null)
-            , @($false, $null)
-            , @('nonempty', 'true')
-            , @($true, 'true')
-        )
     }
     MOODLE_DOCKER_BEHAT_FAILDUMP            = @{
         columns  = {

@@ -22,7 +22,7 @@ Powershell for Moodle provides a PowerShell module for working with Moodle.
 * Provide the same features provided by the current shell and cmd scripts.
 * Provide a single codebase usable on Windows, MacOS, Linux, and any platform capable of running PowerShell core.
 * Provide a comprehesive unit and integration test suite.
-* Provide features suitable for Developer4s who are managing a complete LMS. For example, include only specific extra services of specific versions to match the LMS they are maintaining.
+* Provide features suitable for Developers who are managing a complete LMS. For example, include only specific extra services of specific versions to match the LMS they are maintaining.
 
 ## Features
 * The ability to define the stack configuration in a file in your project workspace and have that file automatically loaded. i.e., no need to set environment variables.
@@ -131,7 +131,7 @@ Invoke-Stack "exec -u www-data webserver php admin/tool/behat/cli/run.php --tags
 2. Support VSCode open-in-container
 3. Enable using tmpfs for DB and moodledata
 4. Enable stop and start versus up and down
-   * Stop-Stack should, perhaps, just stop and add a Remove-Stack function or perhaps 
+   * Stop-Stack should, perhaps, just stop and add a Remove-Stack function or perhaps
    * Start-Stack could look to see if containers exist and just to a start
 5. Add Enable-XDebug and Disable-XDebug?
 6. Windows variant using mixed containers (for the poor tech slobs who have to support an LMS on Windows)

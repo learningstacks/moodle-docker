@@ -42,7 +42,7 @@ function Get-StackParams([hashtable]$PassedParams) {
         MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES = @{
             Default    = $null
             Validation = {
-                return (($paramvalue) ? 'true' : $null)
+                return ([boolean]$paramvalue ? 'true' : $null)
             }
         }
         MOODLE_DOCKER_BEHAT_FAILDUMP            = @{

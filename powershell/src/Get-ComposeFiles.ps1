@@ -39,7 +39,7 @@ function Get-ComposeFiles([hashtable]$StackParams, [string[]]$SearchPaths) {
             Condition = { $StackParams.MOODLE_DOCKER_BROWSER_NAME -ne 'firefox' }
         }
         @{
-            FileName = 'selenium.debug.yml'
+            FileName  = 'selenium.debug.yml'
             Condition = { [boolean]$StackParams.MOODLE_DOCKER_SELENIUM_VNC_PORT }
         }
         @{
@@ -64,7 +64,7 @@ function Get-ComposeFiles([hashtable]$StackParams, [string[]]$SearchPaths) {
         }
     )
 
-    foreach ($rule in $ComposeFileRules) {
+        foreach ($rule in $ComposeFileRules) {
         AddComposeFile @rule
     }
 
